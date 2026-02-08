@@ -1,0 +1,747 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
+
+// Models
+const User = require('./models/User');
+const Equipment = require('./models/Equipment');
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI);
+        console.log('MongoDB Connected');
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        process.exit(1);
+    }
+};
+
+const seedUsers = async () => {
+    const users = [
+        {
+            name: 'Admin User',
+            email: 'admin@playground.com',
+            password: 'admin123',
+            role: 'admin',
+            phone: '9876543210',
+        },
+        {
+            name: 'John Customer',
+            email: 'customer@playground.com',
+            password: 'customer123',
+            role: 'customer',
+            phone: '9876543211',
+            address: {
+                street: '123 Main Street',
+                city: 'Mumbai',
+                state: 'Maharashtra',
+                zipCode: '400001',
+            },
+        },
+        {
+            name: 'Mike Installer',
+            email: 'installer@playground.com',
+            password: 'installer123',
+            role: 'installation_team',
+            phone: '9876543212',
+        },
+    ];
+
+    for (const user of users) {
+        const existingUser = await User.findOne({ email: user.email });
+        if (!existingUser) {
+            await User.create(user);
+            console.log(`Created user: ${user.email}`);
+        } else {
+            console.log(`User already exists: ${user.email}`);
+        }
+    }
+};
+
+const seedEquipment = async () => {
+    const equipment = [
+        // SWINGS - Various Types
+        {
+            name: 'Classic Swing Set',
+            description: 'A sturdy swing set with 2 swings, perfect for residential playgrounds. Made from premium galvanized steel with weather-resistant coating.',
+            category: 'Swings',
+            price: 25000,
+            image: 'http://10.187.147.91:5000/public/images/classic_swing_set.webp',
+            specifications: {
+                dimensions: { length: 3, width: 2, height: 2.5, unit: 'meters' },
+                material: 'Galvanized Steel',
+                ageGroup: { min: 3, max: 12 },
+                capacity: 2,
+                weight: 150,
+                color: ['Blue', 'Yellow'],
+                safetyFeatures: ['Soft grip handles', 'Anti-wrap chains', 'Pinch-free design'],
+            },
+            stock: 15,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        {
+            name: 'Baby Bucket Swing',
+            description: 'Safe bucket-style swing designed specifically for toddlers with full support and security straps.',
+            category: 'Swings',
+            price: 8500,
+            image: 'http://10.187.147.91:5000/public/images/baby_bucket_swing.jpg',
+            specifications: {
+                dimensions: { length: 0.5, width: 0.4, height: 0.6, unit: 'meters' },
+                material: 'HDPE Plastic & Steel Chains',
+                ageGroup: { min: 1, max: 4 },
+                capacity: 1,
+                weight: 8,
+                color: ['Red', 'Blue', 'Yellow'],
+                safetyFeatures: ['Full bucket seat', 'Safety harness', 'Soft edges', 'UV resistant'],
+            },
+            stock: 30,
+            installationRequired: true,
+            installationTime: 0.5,
+            warranty: { duration: 18, unit: 'months' },
+        },
+        {
+            name: 'Tire Swing Deluxe',
+            description: 'Classic recycled tire swing that can hold multiple children, promoting group play and coordination.',
+            category: 'Swings',
+            price: 18000,
+            image: 'http://10.187.147.91:5000/public/images/tire_swing_deluxe.webp',
+            specifications: {
+                dimensions: { length: 3.5, width: 3.5, height: 3, unit: 'meters' },
+                material: 'Recycled Rubber & Steel',
+                ageGroup: { min: 5, max: 14 },
+                capacity: 3,
+                weight: 85,
+                color: ['Black'],
+                safetyFeatures: ['Triple chain support', 'Drainage holes', 'Strong pivot bearing'],
+            },
+            stock: 12,
+            installationRequired: true,
+            installationTime: 1.5,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        {
+            name: 'Nest Swing XL',
+            description: 'Large circular nest swing that can accommodate multiple children at once, perfect for sensory play.',
+            category: 'Swings',
+            price: 22000,
+            image: 'http://10.187.147.91:5000/public/images/nest_swing_xl.jpg',
+            specifications: {
+                dimensions: { length: 1.2, width: 1.2, height: 0.15, unit: 'meters' },
+                material: 'Rope Mesh & Steel Frame',
+                ageGroup: { min: 3, max: 12 },
+                capacity: 4,
+                weight: 25,
+                color: ['Blue', 'Green', 'Orange'],
+                safetyFeatures: ['Soft rope mesh', 'Weight capacity 200kg', 'UV resistant ropes'],
+            },
+            stock: 18,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        {
+            name: 'Accessible Swing Seat',
+            description: 'ADA-compliant swing seat with back support and harness for children with special needs.',
+            category: 'Swings',
+            price: 35000,
+            image: 'http://10.187.147.91:5000/public/images/accessible_swing_seat.jpg',
+            specifications: {
+                dimensions: { length: 0.6, width: 0.5, height: 0.8, unit: 'meters' },
+                material: 'Molded Plastic & Steel',
+                ageGroup: { min: 3, max: 18 },
+                capacity: 1,
+                weight: 15,
+                color: ['Blue', 'Yellow'],
+                safetyFeatures: ['5-point harness', 'High back support', 'Arm rests', 'ADA compliant'],
+            },
+            stock: 8,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Disc Swing',
+            description: 'Fun single-person disc swing that allows 360-degree spinning motion.',
+            category: 'Swings',
+            price: 6500,
+            image: 'http://10.187.147.91:5000/public/images/disc_swing.jpg',
+            specifications: {
+                dimensions: { length: 0.3, width: 0.3, height: 0.05, unit: 'meters' },
+                material: 'HDPE Plastic & Rope',
+                ageGroup: { min: 5, max: 14 },
+                capacity: 1,
+                weight: 3,
+                color: ['Red', 'Blue', 'Green', 'Yellow'],
+                safetyFeatures: ['Non-slip surface', 'Strong rope', 'Weight capacity 80kg'],
+            },
+            stock: 40,
+            installationRequired: true,
+            installationTime: 0.5,
+            warranty: { duration: 12, unit: 'months' },
+        },
+        {
+            name: 'Double Glider Swing',
+            description: 'Face-to-face glider swing for two children, promoting social interaction.',
+            category: 'Swings',
+            price: 28000,
+            image: 'http://10.187.147.91:5000/public/images/double_glider_swing_final.jpg',
+            specifications: {
+                dimensions: { length: 1.5, width: 0.8, height: 0.6, unit: 'meters' },
+                material: 'Steel & HDPE',
+                ageGroup: { min: 4, max: 10 },
+                capacity: 2,
+                weight: 35,
+                color: ['Blue', 'Green'],
+                safetyFeatures: ['Safety handles', 'Non-slip seats', 'Smooth gliding motion'],
+            },
+            stock: 10,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        {
+            name: 'Web Swing',
+            description: 'Spider web-style swing that can hold multiple children, great for imaginative play.',
+            category: 'Swings',
+            price: 32000,
+            image: 'http://10.187.147.91:5000/public/images/web_swing_final.webp',
+            specifications: {
+                dimensions: { length: 1.5, width: 1.5, height: 0.1, unit: 'meters' },
+                material: 'Nylon Rope & Steel Frame',
+                ageGroup: { min: 4, max: 14 },
+                capacity: 5,
+                weight: 30,
+                color: ['Multi-color'],
+                safetyFeatures: ['Heavy-duty ropes', 'Steel carabiner attachment', 'Weight capacity 300kg'],
+            },
+            stock: 7,
+            installationRequired: true,
+            installationTime: 1.5,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        // SLIDES - Various Types
+        {
+            name: 'Rainbow Slide Tower',
+            description: 'Colorful slide tower with spiral slide and climbing wall. A centerpiece attraction for any playground.',
+            category: 'Slides',
+            price: 75000,
+            image: 'http://10.187.147.91:5000/public/images/rainbow_slide_tower.webp',
+            specifications: {
+                dimensions: { length: 4, width: 3, height: 4, unit: 'meters' },
+                material: 'HDPE Plastic & Steel',
+                ageGroup: { min: 5, max: 12 },
+                capacity: 8,
+                weight: 300,
+                color: ['Rainbow'],
+                safetyFeatures: ['Non-slip surface', 'Rounded edges', 'Safety barriers'],
+            },
+            stock: 8,
+            installationRequired: true,
+            installationTime: 2,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Tunnel Slide',
+            description: 'Enclosed tube slide for added excitement and safety for smaller children.',
+            category: 'Slides',
+            price: 45000,
+            image: 'http://10.187.147.91:5000/public/images/tunnel_slide.jpg',
+            specifications: {
+                dimensions: { length: 3, width: 0.8, height: 2.5, unit: 'meters' },
+                material: 'Rotomolded Polyethylene',
+                ageGroup: { min: 3, max: 10 },
+                capacity: 1,
+                weight: 120,
+                color: ['Blue', 'Yellow', 'Red'],
+                safetyFeatures: ['Fully enclosed', 'Anti-static surface', 'Smooth seams'],
+            },
+            stock: 10,
+            installationRequired: true,
+            installationTime: 1.5,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Wave Slide',
+            description: 'Wavy slide design that adds extra fun with gentle bumps along the way.',
+            category: 'Slides',
+            price: 38000,
+            image: 'http://10.187.147.91:5000/public/images/wave_slide.jpg',
+            specifications: {
+                dimensions: { length: 3.5, width: 0.6, height: 2, unit: 'meters' },
+                material: 'Stainless Steel',
+                ageGroup: { min: 4, max: 12 },
+                capacity: 1,
+                weight: 95,
+                color: ['Silver'],
+                safetyFeatures: ['Rolled edges', 'Non-slip launch platform', 'Heat reduction coating'],
+            },
+            stock: 12,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 48, unit: 'months' },
+        },
+        {
+            name: 'Spiral Slide',
+            description: 'Exciting spiral slide that winds down for a thrilling ride experience.',
+            category: 'Slides',
+            price: 55000,
+            image: 'http://10.187.147.91:5000/public/images/spiral_slide.webp',
+            specifications: {
+                dimensions: { length: 2.5, width: 2.5, height: 3.5, unit: 'meters' },
+                material: 'Fiberglass & Steel',
+                ageGroup: { min: 5, max: 14 },
+                capacity: 1,
+                weight: 180,
+                color: ['Red', 'Yellow', 'Blue'],
+                safetyFeatures: ['High sides', 'Smooth surface', 'Sturdy mounting'],
+            },
+            stock: 6,
+            installationRequired: true,
+            installationTime: 2,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Double Racing Slide',
+            description: 'Side-by-side racing slides for competitive fun between friends.',
+            category: 'Slides',
+            price: 68000,
+            image: 'http://10.187.147.91:5000/public/images/double_racing_slide.avif',
+            specifications: {
+                dimensions: { length: 4, width: 2, height: 2.5, unit: 'meters' },
+                material: 'HDPE Plastic',
+                ageGroup: { min: 4, max: 12 },
+                capacity: 2,
+                weight: 140,
+                color: ['Red & Blue'],
+                safetyFeatures: ['Lane divider', 'Soft landing zone', 'Anti-slip steps'],
+            },
+            stock: 8,
+            installationRequired: true,
+            installationTime: 2,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Toddler Mini Slide',
+            description: 'Perfect first slide for toddlers with gentle slope and low height.',
+            category: 'Slides',
+            price: 15000,
+            image: 'http://10.187.147.91:5000/public/images/toddler_mini_slide.jpg',
+            specifications: {
+                dimensions: { length: 1.5, width: 0.5, height: 0.8, unit: 'meters' },
+                material: 'HDPE Plastic',
+                ageGroup: { min: 1, max: 4 },
+                capacity: 1,
+                weight: 25,
+                color: ['Pink', 'Blue', 'Green'],
+                safetyFeatures: ['Extra wide steps', 'Handle bars', 'Soft edges'],
+            },
+            stock: 25,
+            installationRequired: false,
+            installationTime: 0,
+            warranty: { duration: 18, unit: 'months' },
+        },
+        {
+            name: 'Curved Slide',
+            description: 'Smooth curved slide with gentle turn for an exciting descent.',
+            category: 'Slides',
+            price: 42000,
+            image: 'http://10.187.147.91:5000/public/images/curved_slide.jpg',
+            specifications: {
+                dimensions: { length: 3.5, width: 0.7, height: 2.2, unit: 'meters' },
+                material: 'Stainless Steel & HDPE',
+                ageGroup: { min: 4, max: 12 },
+                capacity: 1,
+                weight: 110,
+                color: ['Green', 'Orange'],
+                safetyFeatures: ['Banked curve', 'Smooth transitions', 'Safety rails'],
+            },
+            stock: 10,
+            installationRequired: true,
+            installationTime: 1.5,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Giant Drop Slide',
+            description: 'Tall freestanding slide with steep angle for maximum excitement.',
+            category: 'Slides',
+            price: 85000,
+            image: 'http://10.187.147.91:5000/public/images/giant_drop_slide.webp',
+            specifications: {
+                dimensions: { length: 5, width: 0.8, height: 4, unit: 'meters' },
+                material: 'Stainless Steel',
+                ageGroup: { min: 6, max: 16 },
+                capacity: 1,
+                weight: 220,
+                color: ['Silver'],
+                safetyFeatures: ['Safety cage top', 'Speed bumps', 'Landing zone pad'],
+            },
+            stock: 4,
+            installationRequired: true,
+            installationTime: 3,
+            warranty: { duration: 48, unit: 'months' },
+        },
+        // CLIMBING EQUIPMENT
+        {
+            name: 'Adventure Climbing Frame',
+            description: 'Multi-level climbing structure with rope nets, monkey bars, and platforms. Great for building strength and coordination.',
+            category: 'Climbing Equipment',
+            price: 95000,
+            image: 'http://10.187.147.91:5000/public/images/adventure_climbing_frame.jpg',
+            specifications: {
+                dimensions: { length: 5, width: 4, height: 3.5, unit: 'meters' },
+                material: 'Treated Wood & Steel',
+                ageGroup: { min: 6, max: 14 },
+                capacity: 12,
+                weight: 450,
+                color: ['Natural Wood', 'Green'],
+                safetyFeatures: ['Fall zones', 'Grip-enhanced surfaces', 'Safety nets'],
+            },
+            stock: 5,
+            installationRequired: true,
+            installationTime: 3,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Rock Climbing Wall',
+            description: 'Vertical rock climbing wall with colorful hand and foot holds.',
+            category: 'Climbing Equipment',
+            price: 55000,
+            image: 'http://10.187.147.91:5000/public/images/rock_climbing_wall.jpeg',
+            specifications: {
+                dimensions: { length: 2.5, width: 0.5, height: 3, unit: 'meters' },
+                material: 'Fiberglass & Polyester',
+                ageGroup: { min: 6, max: 16 },
+                capacity: 3,
+                weight: 180,
+                color: ['Multi-color holds'],
+                safetyFeatures: ['Fall mat required', 'Textured surface', 'Various difficulty levels'],
+            },
+            stock: 9,
+            installationRequired: true,
+            installationTime: 2,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Rope Pyramid',
+            description: 'Towering rope climbing pyramid for adventurous climbers.',
+            category: 'Climbing Equipment',
+            price: 125000,
+            image: 'http://10.187.147.91:5000/public/images/rope_pyramid.webp',
+            specifications: {
+                dimensions: { length: 6, width: 6, height: 5, unit: 'meters' },
+                material: 'Steel Frame & Hercules Rope',
+                ageGroup: { min: 6, max: 16 },
+                capacity: 20,
+                weight: 800,
+                color: ['Black', 'Blue'],
+                safetyFeatures: ['UV resistant ropes', 'Galvanized frame', 'Soft landing zone required'],
+            },
+            stock: 3,
+            installationRequired: true,
+            installationTime: 4,
+            warranty: { duration: 48, unit: 'months' },
+        },
+        // SPRING RIDERS
+        {
+            name: 'Spring Rider - Horse',
+            description: 'Fun horse-shaped spring rider for toddlers. Provides gentle bouncing motion.',
+            category: 'Spring Riders',
+            price: 12000,
+            image: 'http://10.187.147.91:5000/public/images/spring_rider_horse.jpg',
+            specifications: {
+                dimensions: { length: 0.8, width: 0.4, height: 0.9, unit: 'meters' },
+                material: 'HDPE Plastic & Steel Spring',
+                ageGroup: { min: 2, max: 6 },
+                capacity: 1,
+                weight: 35,
+                color: ['Brown', 'Yellow'],
+                safetyFeatures: ['Wide base', 'Ergonomic handles', 'Soft edges'],
+            },
+            stock: 25,
+            installationRequired: true,
+            installationTime: 0.5,
+            warranty: { duration: 12, unit: 'months' },
+        },
+        {
+            name: 'Spring Rider - Motorcycle',
+            description: 'Exciting motorcycle-shaped spring rider for adventurous toddlers.',
+            category: 'Spring Riders',
+            price: 14000,
+            image: 'http://10.187.147.91:5000/public/images/spring_rider_motorcycle.webp',
+            specifications: {
+                dimensions: { length: 0.9, width: 0.4, height: 0.8, unit: 'meters' },
+                material: 'HDPE Plastic & Steel Spring',
+                ageGroup: { min: 3, max: 7 },
+                capacity: 1,
+                weight: 38,
+                color: ['Red', 'Blue'],
+                safetyFeatures: ['Dual handles', 'Wide footrest', 'Stable spring'],
+            },
+            stock: 20,
+            installationRequired: true,
+            installationTime: 0.5,
+            warranty: { duration: 12, unit: 'months' },
+        },
+        {
+            name: 'Double Spring Rider',
+            description: 'Two-seater spring rider for paired play, shaped like a friendly dragon.',
+            category: 'Spring Riders',
+            price: 22000,
+            image: 'http://10.187.147.91:5000/public/images/double_spring_riders.avif',
+            specifications: {
+                dimensions: { length: 1.2, width: 0.5, height: 1, unit: 'meters' },
+                material: 'HDPE Plastic & Dual Steel Springs',
+                ageGroup: { min: 3, max: 8 },
+                capacity: 2,
+                weight: 55,
+                color: ['Green', 'Purple'],
+                safetyFeatures: ['Synchronized springs', 'Dual grip handles', 'Anti-tip design'],
+            },
+            stock: 12,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 18, unit: 'months' },
+        },
+        // SEESAWS
+        {
+            name: 'Classic Seesaw',
+            description: 'Traditional two-seater seesaw with comfortable seats and sturdy construction.',
+            category: 'Seesaws',
+            price: 18000,
+            image: 'http://10.187.147.91:5000/public/images/classic_see_saw.jpg',
+            specifications: {
+                dimensions: { length: 3.5, width: 0.5, height: 1.2, unit: 'meters' },
+                material: 'Steel & HDPE',
+                ageGroup: { min: 4, max: 12 },
+                capacity: 2,
+                weight: 65,
+                color: ['Red', 'Blue'],
+                safetyFeatures: ['Ground bumpers', 'Hand grips', 'Balanced pivot'],
+            },
+            stock: 12,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        {
+            name: 'Four-Way Seesaw',
+            description: 'Multi-rider seesaw for four children, promoting group coordination.',
+            category: 'Seesaws',
+            price: 32000,
+            image: 'http://10.187.147.91:5000/public/images/four_way_see_saw.jpg',
+            specifications: {
+                dimensions: { length: 3, width: 3, height: 0.8, unit: 'meters' },
+                material: 'Steel & HDPE Seats',
+                ageGroup: { min: 4, max: 12 },
+                capacity: 4,
+                weight: 95,
+                color: ['Multi-color'],
+                safetyFeatures: ['Spring-loaded', 'Comfortable seats', 'Central pivot'],
+            },
+            stock: 8,
+            installationRequired: true,
+            installationTime: 1.5,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        // MERRY-GO-ROUNDS
+        {
+            name: 'Merry-Go-Round Deluxe',
+            description: 'Large capacity spinning platform with safety handles. Perfect for group play.',
+            category: 'Merry-Go-Rounds',
+            price: 45000,
+            image: 'http://10.187.147.91:5000/public/images/merry_go_round_deluxe.jpg',
+            specifications: {
+                dimensions: { length: 2, width: 2, height: 0.8, unit: 'meters' },
+                material: 'Aluminum & Steel',
+                ageGroup: { min: 4, max: 14 },
+                capacity: 6,
+                weight: 120,
+                color: ['Multi-color'],
+                safetyFeatures: ['Speed limiter', 'Grip handles', 'Anti-slip surface'],
+            },
+            stock: 6,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        {
+            name: 'Spinning Cup Ride',
+            description: 'Tea cup style spinning ride with center wheel for self-powered rotation.',
+            category: 'Merry-Go-Rounds',
+            price: 28000,
+            image: 'http://10.187.147.91:5000/public/images/spinning_cup_ride.jpg',
+            specifications: {
+                dimensions: { length: 1.5, width: 1.5, height: 1, unit: 'meters' },
+                material: 'Fiberglass & Steel',
+                ageGroup: { min: 4, max: 10 },
+                capacity: 4,
+                weight: 85,
+                color: ['Pink', 'Blue', 'Yellow'],
+                safetyFeatures: ['Center steering wheel', 'Padded interior', 'Secure seating'],
+            },
+            stock: 10,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        // SAND PLAY
+        {
+            name: 'Interactive Sand Play Table',
+            description: 'Elevated sand table with water channels and accessories for creative play.',
+            category: 'Sand Play',
+            price: 28000,
+            image: 'http://10.187.147.91:5000/public/images/sand_play_table.jpg',
+            specifications: {
+                dimensions: { length: 1.5, width: 1, height: 0.6, unit: 'meters' },
+                material: 'HDPE Plastic',
+                ageGroup: { min: 2, max: 8 },
+                capacity: 4,
+                weight: 40,
+                color: ['Blue', 'Yellow'],
+                safetyFeatures: ['Rounded corners', 'Easy drain', 'UV resistant'],
+            },
+            stock: 15,
+            installationRequired: false,
+            installationTime: 0.5,
+            warranty: { duration: 12, unit: 'months' },
+        },
+        {
+            name: 'Giant Sand Box',
+            description: 'Large sandbox with cover to keep sand clean and dry.',
+            category: 'Sand Play',
+            price: 35000,
+            image: 'http://10.187.147.91:5000/public/images/giant_sand_box.png',
+            specifications: {
+                dimensions: { length: 3, width: 3, height: 0.4, unit: 'meters' },
+                material: 'Treated Wood & Liner',
+                ageGroup: { min: 1, max: 10 },
+                capacity: 10,
+                weight: 120,
+                color: ['Natural Wood'],
+                safetyFeatures: ['Mesh cover included', 'Smooth edges', 'Drainage system'],
+            },
+            stock: 8,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        // FITNESS EQUIPMENT
+        {
+            name: 'Outdoor Fitness Station',
+            description: 'Complete outdoor gym equipment including pull-up bar, parallel bars, and leg press.',
+            category: 'Fitness Equipment',
+            price: 85000,
+            image: 'http://10.187.147.91:5000/public/images/outdoor_fitness_station.jpg',
+            specifications: {
+                dimensions: { length: 4, width: 2, height: 2.5, unit: 'meters' },
+                material: 'Stainless Steel',
+                ageGroup: { min: 14, max: 60 },
+                capacity: 4,
+                weight: 350,
+                color: ['Silver', 'Black'],
+                safetyFeatures: ['Non-slip grips', 'Rust resistant', 'Ground anchors'],
+            },
+            stock: 4,
+            installationRequired: true,
+            installationTime: 2,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Balance Beam Set',
+            description: 'Low balance beams in various heights for developing coordination skills.',
+            category: 'Fitness Equipment',
+            price: 22000,
+            image: 'http://10.187.147.91:5000/public/images/balanced_set_beam.avif',
+            specifications: {
+                dimensions: { length: 4, width: 0.15, height: 0.3, unit: 'meters' },
+                material: 'Treated Wood & Rubber',
+                ageGroup: { min: 4, max: 12 },
+                capacity: 3,
+                weight: 45,
+                color: ['Natural Wood', 'Colorful tops'],
+                safetyFeatures: ['Low height', 'Non-slip surface', 'Rounded edges'],
+            },
+            stock: 15,
+            installationRequired: true,
+            installationTime: 1,
+            warranty: { duration: 24, unit: 'months' },
+        },
+        // PLAYHOUSES
+        {
+            name: 'Wooden Playhouse',
+            description: 'Charming wooden playhouse with windows, door, and flower box.',
+            category: 'Playhouses',
+            price: 65000,
+            image: 'http://10.187.147.91:5000/public/images/wooden_playhouse.jpg',
+            specifications: {
+                dimensions: { length: 2, width: 1.5, height: 2, unit: 'meters' },
+                material: 'Treated Cedar Wood',
+                ageGroup: { min: 2, max: 10 },
+                capacity: 4,
+                weight: 200,
+                color: ['Natural Wood', 'White trim'],
+                safetyFeatures: ['Rounded corners', 'Safe door hinges', 'Non-toxic paint'],
+            },
+            stock: 5,
+            installationRequired: true,
+            installationTime: 3,
+            warranty: { duration: 36, unit: 'months' },
+        },
+        {
+            name: 'Castle Playhouse',
+            description: 'Magical castle-themed playhouse with turrets and drawbridge.',
+            category: 'Playhouses',
+            price: 95000,
+            image: 'http://10.187.147.91:5000/public/images/castle_playhouse.webp',
+            specifications: {
+                dimensions: { length: 3, width: 2.5, height: 3, unit: 'meters' },
+                material: 'HDPE Plastic & Steel Frame',
+                ageGroup: { min: 3, max: 12 },
+                capacity: 8,
+                weight: 350,
+                color: ['Grey', 'Blue', 'Red flags'],
+                safetyFeatures: ['Stable structure', 'Safe drawbridge', 'Multiple exits'],
+            },
+            stock: 4,
+            installationRequired: true,
+            installationTime: 4,
+            warranty: { duration: 36, unit: 'months' },
+        },
+    ];
+
+    for (const item of equipment) {
+        const existingItem = await Equipment.findOne({ name: item.name });
+        if (!existingItem) {
+            await Equipment.create(item);
+            console.log(`Created equipment: ${item.name}`);
+        } else {
+            // Update existing equipment with new image and data
+            await Equipment.findOneAndUpdate({ name: item.name }, item);
+            console.log(`Updated equipment: ${item.name}`);
+        }
+    }
+};
+
+const seedDatabase = async () => {
+    await connectDB();
+
+    console.log('\n🌱 Seeding database...\n');
+
+    await seedUsers();
+    console.log('');
+    await seedEquipment();
+
+    console.log('\n✅ Database seeded successfully!\n');
+    console.log('Test Accounts:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Admin:      admin@playground.com / admin123');
+    console.log('Customer:   customer@playground.com / customer123');
+    console.log('Installer:  installer@playground.com / installer123');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    process.exit(0);
+};
+
+seedDatabase().catch(console.error);
